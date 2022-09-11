@@ -11,7 +11,7 @@ from prompt_toolkit.filters import (
     completion_is_selected,
 )
 from prompt_toolkit.application.current import get_app
-
+from copy import deepcopy
 
 def prompt_autocomplete():
     app = get_app()
@@ -39,7 +39,7 @@ file_name = 'DB.json'
 def autoComp(method, lists, preRun):
     lists = FuzzyWordCompleter(lists)
     if method in ["입고", "출고", "조정"]:
-        method = f"{method}:"
+        method = f"{method}처:"
     if preRun == True:
         response = prompt(f'{method}',
                           completer=lists,
@@ -143,38 +143,49 @@ def product():
         break
 
 
-def edit():  # 수량 조절
-    pass
-
-
 def times():
     now = datetime.datetime.now()
     NDT = now.strftime('%m/%d %H:%M:%S')
     return now
 
 
+def edit(data,method):
+    print(data)
+    history(method)
+
 def history(data):  # 입출고내역
     dic1 = json_load()
     while 1:
         table = Texttable()
-        tableList = [["거래처", "거래시간", "거래구분", "제품명", "수량", "전", "후", "비고"]]
+        tableList = [["No.", "거래처", "거래시간", "거래구분", "제품명", "수량", "전", "후", "비고"]]
+        index = 1
+        dataSave = {}
         for k, v in dic1.items():
             for key in v:
                 value = list(key.values())[0]
                 key = list(key.keys())[0].split(".")[0]
+                jsonData = deepcopy({"item":k,"time":key,"data":value})
                 times = datetime.fromtimestamp(float(key))
-                value.insert(0, value[1])
-                value.insert(1, times)
+                value.insert(0, index)
+                value.insert(1, value[1])
+                value.insert(2, times)
                 value[3] = k
                 if data != "none":
                     if value[0] == data:
                         tableList.append(value)
+                        dataSave[str(index)] = jsonData
+                        index = index + 1
                 else:
                     tableList.append(value)
+                    dataSave[str(index)] = jsonData
+                    index = index + 1
         table.add_rows(tableList)
         print(table.draw())
-        answer = input("BACK:")
-        break
+        answer = input("명령:")
+        if answer == "":
+            break
+        else:
+            edit(dataSave[answer],data)
 
 
 def json_save(temp):
@@ -202,11 +213,9 @@ def item_load():
 while 1:
     start = {
         1: "제품현황",
-        2: "입고",
-        3: "출고",
-        4: "조정",
-        5: "입출고내역",
-        6: "위치별 제품목록",
+        2: "재고관리",
+        3: "입출고내역",
+        4: "위치별 제품목록",
     }
 
     table = Texttable()
@@ -221,14 +230,12 @@ while 1:
     if a == "1":
         product()
     elif a == "2":
-        in_put("입고")
+        item = item_load()
+        command = autoComp(f'작업모드:', ["입고", "출고", "조정"], True)
+        in_put(command)
     elif a == "3":
-        in_put("출고")
-    elif a == "4":
-        edit()
-    elif a == "5":
         history("none")
-    elif a == "6":
+    elif a == "4":
         item = item_load()
         location = autoComp(f'거래처:', item["location"], True)
         history(location)
